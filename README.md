@@ -1,2 +1,2 @@
 # UnitySDK
-The offcailly supported SDK for Pairiquium in Unity.
+The officially supported SDK for Pairiquium in Unity.
