@@ -1,5 +1,8 @@
 # Pairiquium Unity SDK
 
+[![openupm](https://img.shields.io/npm/v/com.pairiquium.sdk?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.pairiquium.sdk/)
+[![openupm](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=downloads&query=%24.downloads&suffix=%2Fmonth&url=https%3A%2F%2Fpackage.openupm.com%2Fdownloads%2Fpoint%2Flast-month%2Fcom.pairiquium.sdk)](https://openupm.com/packages/com.pairiquium.sdk/)
+
 The officially supported SDK for [Pairiquium](https://pairiquium.com) — multi-tenant matchmaking-as-a-service — in Unity.
 
 Implements the ticket/WebSocket protocol described in [`Pairiquium/API-Specs`](https://github.com/Pairiquium/API-Specs): mint a ticket from your own backend, connect, search, get matched. See [`spec/PROTOCOL.md`](spec/PROTOCOL.md) for the full protocol narrative; this SDK is pinned to the version noted in [`spec/VERSION.md`](spec/VERSION.md).
@@ -21,7 +24,34 @@ Pairiquium ──(5) POST <your NotificationWebhook> ──▶ Your backend
 
 ## Install
 
-Via git URL in the Unity Package Manager (Window → Package Manager → `+` → "Add package from git URL"):
+### Via OpenUPM (recommended)
+
+```
+openupm add com.pairiquium.sdk
+```
+
+Or add the scoped registry manually in `Packages/manifest.json`:
+
+```json
+{
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": ["com.pairiquium.sdk"]
+    }
+  ],
+  "dependencies": {
+    "com.pairiquium.sdk": "1.0.0"
+  }
+}
+```
+
+(Or via the Editor: Edit → Project Settings → Package Manager → Scoped Registries, using the same name/URL/scope, then add the package by name/version from the Package Manager window.)
+
+### Via git URL
+
+Window → Package Manager → `+` → "Add package from git URL":
 
 ```
 https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.0.0
