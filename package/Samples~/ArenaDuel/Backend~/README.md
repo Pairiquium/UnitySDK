@@ -14,6 +14,9 @@ backend would need, at minimum: webhook signature verification once Pairiquium s
 datastore instead of an in-memory `Map`, and a relay/game-server fleet instead of one process
 on your laptop.
 
+This is a stand in for local testing only, you are free to implement your own backend and use that
+in place of this. This just serves as a quick route to test the Arena Dual Sample.
+
 ## Setup
 
 ```
@@ -85,7 +88,7 @@ WebSockets - a bigger, one-time system change rather than a per-session workarou
 ## Running two clients against this backend
 
 This backend doesn't care how many client processes connect — matching is entirely Pairiquium's
-job, this backend just reacts to whichever `matchId` shows up in a webhook. To test locally:
+job as is the expected way to work with Pairiquium, this backend just reacts to whichever `matchId` shows up in a webhook. To test locally:
 
 1. In Unity: **File → Build Settings → Build And Run** once to produce a standalone build.
 2. Launch that same build a second time (just run the `.exe` again — a built Player has no
