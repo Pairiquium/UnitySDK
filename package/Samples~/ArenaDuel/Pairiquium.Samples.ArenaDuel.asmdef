@@ -1,0 +1,17 @@
+{
+    "name": "Pairiquium.Samples.ArenaDuel",
+    "rootNamespace": "Pairiquium.Samples",
+    "references": [
+        "Pairiquium.Core",
+        "Pairiquium.Unity",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": []
+}

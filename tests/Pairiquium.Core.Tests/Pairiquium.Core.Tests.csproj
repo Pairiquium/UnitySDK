@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      net8.0 is the TFM that actually hosts and runs the tests. netstandard2.1 is built too (no
+      test adapter targets it) purely to prove the Core sources compile against the netstandard2.1
+      surface the shipped package.json targets - this is what milestone 1 calls "confirm the core
+      compiles under netstandard2.1 on C# 9". `dotnet test` builds both TFMs but only runs tests
+      for net8.0.
+    -->
+    <TargetFrameworks>net8.0;netstandard2.1</TargetFrameworks>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Pairiquium.Core.Tests</RootNamespace>
+    <!--
+      The SDK's default item globbing isn't TFM-conditional: without this, test files (which only
+      compile for net8.0, see below) would also get swept into the netstandard2.1 leg, where NUnit
+      etc. aren't referenced. Disable it and list Compile items explicitly per TFM instead.
+    -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <!-- Only the net8.0 runtime may not be installed on a given machine/CI image; roll forward
+         to whatever major runtime is present rather than requiring an exact match. -->
+    <RollForward>LatestMajor</RollForward>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The same source files the Unity package ships, compiled directly into this assembly. -->
+    <Compile Include="..\..\package\Runtime\Core\**\*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <Compile Include="**\*.cs" Exclude="bin\**;obj\**" />
+    <None Include="..\..\spec\**\*.*">
+      <Link>spec\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="JsonSchema.Net" Version="7.2.3" />
+  </ItemGroup>
+
+</Project>

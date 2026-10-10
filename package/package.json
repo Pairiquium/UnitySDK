@@ -1,0 +1,33 @@
+{
+  "name": "com.pairiquium.sdk",
+  "version": "1.0.0",
+  "displayName": "Pairiquium Matchmaking SDK",
+  "description": "Official Unity SDK for Pairiquium matchmaking-as-a-service. Implements the ticket/WebSocket protocol described in Pairiquium/API-Specs.",
+  "unity": "2021.3",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Pairiquium",
+    "url": "https://pairiquium.com"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.inputsystem": "1.7.0"
+  },
+  "keywords": [
+    "matchmaking",
+    "multiplayer",
+    "networking"
+  ],
+  "samples": [
+    {
+      "displayName": "Basic Matchmaking",
+      "description": "Game mode and region selection (with an Automatic option), start/cancel search, and visual feedback panels for match-found, error, and connection state.",
+      "path": "Samples~/BasicMatchmaking"
+    },
+    {
+      "displayName": "Arena Duel",
+      "description": "Completes the loop Basic Matchmaking stops short of: after a match is found, two players actually connect and play a real-time 2D arena shooter, relayed by a local backend you run yourself (included, see Backend~/README.md).",
+      "path": "Samples~/ArenaDuel"
+    }
+  ]
+}

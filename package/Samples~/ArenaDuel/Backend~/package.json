@@ -1,0 +1,14 @@
+{
+  "name": "arena-duel-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local reference backend for the Pairiquium UnitySDK's ArenaDuel sample: ticket proxy, match webhook receiver, and a dumb relay WebSocket for gameplay. Dev/demo only.",
+  "main": "arena-backend.js",
+  "scripts": {
+    "start": "node arena-backend.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ws": "^8.18.0"
+  }
+}

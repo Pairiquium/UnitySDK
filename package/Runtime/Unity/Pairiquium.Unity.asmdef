@@ -1,0 +1,17 @@
+{
+    "name": "Pairiquium.Unity",
+    "rootNamespace": "Pairiquium.Unity",
+    "references": [
+        "Pairiquium.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [
+        "WebGL"
+    ],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}

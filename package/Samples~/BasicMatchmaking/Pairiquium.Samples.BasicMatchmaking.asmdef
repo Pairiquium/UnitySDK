@@ -1,0 +1,16 @@
+{
+    "name": "Pairiquium.Samples.BasicMatchmaking",
+    "rootNamespace": "Pairiquium.Samples",
+    "references": [
+        "Pairiquium.Core",
+        "Pairiquium.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": []
+}

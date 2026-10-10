@@ -107,3 +107,15 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# dotnet build artifacts (tests/Pairiquium.Core.Tests)
+bin/
+obj/
+
+# The blanket *.csproj rule above (Unity's default ignore list) would also hide
+# our deliberately-committed dotnet test project; un-ignore it.
+!/tests/**/*.csproj
+
+# Node (ArenaDuel sample's local backend, package/Samples~/ArenaDuel/Backend~/)
+node_modules/
+.env
