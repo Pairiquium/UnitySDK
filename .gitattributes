@@ -1,0 +1,6 @@
+# Unity's auto-generated asset metadata files must stay tracked (see AGENTS.md/README for why -
+# the GUID in each one is load-bearing for every serialized cross-reference in the project), but
+# they're pure noise to read, diff, or count toward this repo's language stats. Marking them
+# "generated" tells GitHub to collapse them by default in PR diffs and exclude them from the
+# language breakdown, without touching how git itself tracks them.
+*.meta linguist-generated=true
