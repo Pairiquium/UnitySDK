@@ -5,6 +5,21 @@ All notable changes to this package are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-11
+
+### Added
+
+- `MatchmakingBehaviour.Initialize` takes an optional `transportFactory`. Platforms without
+  `System.Net.WebSockets.ClientWebSocket` (consoles) can now pass their own `IWebSocketTransport`
+  and still use the component's main-thread `UnityEvent`s and cleanup, instead of dropping down to
+  `MatchmakingClient` and marshalling threads themselves. Omit it to keep the default desktop
+  transport; existing code is unaffected.
+
+### Changed
+
+- Vendored `API-Specs` updated from `v1.0.0` to `v1.0.1`. That release documents the `401`
+  response of `POST /v1/tickets`; there is no protocol change.
+
 ## [1.0.1] - 2026-10-11
 
 ### Fixed

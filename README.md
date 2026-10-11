@@ -42,7 +42,7 @@ Or add the scoped registry manually in `Packages/manifest.json`:
     }
   ],
   "dependencies": {
-    "com.pairiquium.sdk": "1.0.1"
+    "com.pairiquium.sdk": "1.1.0"
   }
 }
 ```
@@ -54,7 +54,7 @@ Or add the scoped registry manually in `Packages/manifest.json`:
 Window → Package Manager → `+` → "Add package from git URL":
 
 ```
-https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.0.1
+https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.1.0
 ```
 
 Requires Unity 2021.3 LTS or newer. Pulls in `com.unity.nuget.newtonsoft-json` as a dependency.
@@ -119,7 +119,7 @@ Core ships as source, not a prebuilt DLL — read it, modify it, fork it, port i
 
 - Default transport (`ClientWebSocketTransport`) targets **Windows and Linux desktop** via `System.Net.WebSockets.ClientWebSocket`.
 - **WebGL** is out of scope and excluded at the assembly level (`Pairiquium.Unity.asmdef`) — browsers don't allow raw WebSocket access the way `ClientWebSocket` needs.
-- **Consoles**: `IWebSocketTransport` is the extension point. Console transports are implemented separately (under each platform's NDA) and aren't part of this public repo.
+- **Consoles**: `IWebSocketTransport` is the extension point. Console transports are implemented separately (under each platform's NDA) and aren't part of this public repo. Pass yours to `MatchmakingBehaviour.Initialize(ticketProvider, options, transportFactory: () => new MyTransport())` and keep the component's main-thread events and cleanup.
 - Steam has no special integration here — it just runs on standard Windows/Linux (/Mac) builds. Steamworks integration, if you need it, is a separate concern from matchmaking.
 
 ## Contributing / spec changes

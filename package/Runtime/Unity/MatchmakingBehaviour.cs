@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Pairiquium.Messages;
 using Pairiquium.Tickets;
+using Pairiquium.Transport;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -47,14 +48,29 @@ namespace Pairiquium.Unity
 
         public MatchmakingConnectionState State => _client?.State ?? MatchmakingConnectionState.Idle;
 
-        public void Initialize(ITicketProvider ticketProvider, MatchmakingClientOptions options = null)
+        /// <param name="ticketProvider">Where tickets come from; see <see cref="ITicketProvider"/>.</param>
+        /// <param name="options">Optional heartbeat and reconnect tuning.</param>
+        /// <param name="transportFactory">
+        /// Optional factory for the WebSocket transport, called once per connection attempt. Leave it
+        /// null on Windows and Linux desktop to use <see cref="ClientWebSocketTransport"/>. Platforms
+        /// without <c>System.Net.WebSockets.ClientWebSocket</c> (consoles) pass their own
+        /// <see cref="IWebSocketTransport"/> here and keep everything else this component does:
+        /// main-thread events and cleanup.
+        /// </param>
+        public void Initialize(
+            ITicketProvider ticketProvider,
+            MatchmakingClientOptions options = null,
+            Func<IWebSocketTransport> transportFactory = null)
         {
             if (_client != null)
             {
                 throw new InvalidOperationException($"{nameof(MatchmakingBehaviour)} is already initialized.");
             }
 
-            _client = new MatchmakingClient(ticketProvider, () => new ClientWebSocketTransport(), options);
+            _client = new MatchmakingClient(
+                ticketProvider,
+                transportFactory ?? (() => new ClientWebSocketTransport()),
+                options);
             _client.MatchFound += metadata => Dispatch(() => onMatchFound.Invoke(metadata));
             _client.ErrorReceived += (data, isTerminal) => Dispatch(() => onError.Invoke(data, isTerminal));
             _client.SearchSuperseded += () => Dispatch(() => onSearchSuperseded.Invoke());

@@ -1,6 +1,6 @@
 {
   "name": "com.pairiquium.sdk",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "displayName": "Pairiquium Matchmaking SDK",
   "description": "Official Unity SDK for the Pairiquium matchmaking engine. Implements the ticket/WebSocket protocol described in Pairiquium/API-Specs.",
   "unity": "2021.3",
