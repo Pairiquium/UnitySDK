@@ -15,15 +15,20 @@ namespace Pairiquium
         /// Backoff for reconnect attempts after an unexpected drop. PROTOCOL.md only says "don't
         /// retry in a tight loop, back off between attempts" without specifying a policy; this is
         /// this SDK's choice (exponential, capped), not a documented protocol requirement.
+        /// Backoff restarts from <see cref="InitialReconnectDelay"/> once a reconnected connection
+        /// has proved stable (see <see cref="MaxReconnectAttempts"/>).
         /// </summary>
         public TimeSpan InitialReconnectDelay { get; set; } = TimeSpan.FromSeconds(1);
 
         public TimeSpan MaxReconnectDelay { get; set; } = TimeSpan.FromSeconds(16);
 
         /// <summary>
-        /// Caps reconnect attempts after an unexpected drop. Null (default) means retry
-        /// indefinitely until <see cref="MatchmakingClient.CancelSearchAsync"/> or
-        /// <see cref="MatchmakingClient.CloseAsync"/> is called.
+        /// Caps consecutive reconnect attempts after an unexpected drop. The count restarts once a
+        /// connection proves stable, meaning it stays up for a full <see cref="HeartbeatInterval"/>
+        /// and accepts a heartbeat, so a long search that reconnects successfully many times is
+        /// not cut off. Null (default) means retry indefinitely until
+        /// <see cref="MatchmakingClient.CancelSearchAsync"/> or <see cref="MatchmakingClient.CloseAsync"/>
+        /// is called.
         /// </summary>
         public int? MaxReconnectAttempts { get; set; }
 

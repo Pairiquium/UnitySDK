@@ -42,7 +42,7 @@ Or add the scoped registry manually in `Packages/manifest.json`:
     }
   ],
   "dependencies": {
-    "com.pairiquium.sdk": "1.0.0"
+    "com.pairiquium.sdk": "1.0.1"
   }
 }
 ```
@@ -54,10 +54,12 @@ Or add the scoped registry manually in `Packages/manifest.json`:
 Window → Package Manager → `+` → "Add package from git URL":
 
 ```
-https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.0.0
+https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.0.1
 ```
 
 Requires Unity 2021.3 LTS or newer. Pulls in `com.unity.nuget.newtonsoft-json` as a dependency.
+
+The samples additionally need the **Input System** package (`com.unity.inputsystem`). It is not installed automatically: add it from Package Manager (Unity Registry) before importing a sample.
 
 ## Quick start
 

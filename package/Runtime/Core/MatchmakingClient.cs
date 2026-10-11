@@ -116,12 +116,19 @@ namespace Pairiquium
         {
             SetState(MatchmakingConnectionState.Connecting);
 
+            // Every attempt gets a fresh connection, so whatever the previous attempt left behind
+            // is finished with: the dropped socket on a reconnect, or the still-open one when
+            // BeginSearchAsync is called again mid-search or after a match.
+            DiscardTransport();
+
+            IWebSocketTransport transport = null;
+
             try
             {
                 TicketInfo ticket = await _ticketProvider
                     .GetTicketAsync(_currentPreferredRegion, cancellationToken)
                     .ConfigureAwait(false);
-                IWebSocketTransport transport = _transportFactory();
+                transport = _transportFactory();
 
                 var uri = new Uri($"{ticket.WsEndpoint.TrimEnd('/')}/?ticket={Uri.EscapeDataString(ticket.Ticket)}");
                 await transport.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
@@ -136,10 +143,13 @@ namespace Pairiquium
             }
             catch (OperationCanceledException)
             {
+                DisposeIfNeverAdopted(transport);
                 throw;
             }
             catch (Exception ex)
             {
+                DisposeIfNeverAdopted(transport);
+
                 // Couldn't even get a connection up - e.g. the ticket backend is unreachable, or
                 // the handshake itself failed. PROTOCOL.md section 6's ERROR codes all presuppose
                 // a connection already exists, so without this the caller would see nothing at
@@ -157,9 +167,16 @@ namespace Pairiquium
         {
             try
             {
-                while (!cancellationToken.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested && IsCurrent(transport))
                 {
                     TransportReceiveResult result = await transport.ReceiveAsync(cancellationToken).ConfigureAwait(false);
+
+                    // This transport was replaced (a new search or reconnect started) while we were
+                    // waiting: anything it reports now is about a connection nobody is using.
+                    if (!IsCurrent(transport))
+                    {
+                        return;
+                    }
 
                     if (result.IsClose)
                     {
@@ -176,6 +193,13 @@ namespace Pairiquium
             }
             catch (Exception)
             {
+                // A fault on a transport we've already replaced (e.g. it was disposed under us) is
+                // expected and must not disturb the connection that replaced it.
+                if (!IsCurrent(transport))
+                {
+                    return;
+                }
+
                 // Unexpected transport fault: treat like a dropped connection.
                 await HandleUnexpectedCloseAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -203,6 +227,10 @@ namespace Pairiquium
                     break;
 
                 case MatchFoundMessage matchFound:
+                    // The search is finished. Without this, the connection closing later (an idle
+                    // timeout, say) would look like an unexpected drop and reconnect, sending
+                    // begin_search again and queueing a player who was just matched.
+                    _cancelRequested = true;
                     StopHeartbeat();
                     SetState(MatchmakingConnectionState.Idle);
                     MatchFound?.Invoke(matchFound.Data?.Metadata);
@@ -345,6 +373,12 @@ namespace Pairiquium
                     if (State == MatchmakingConnectionState.Searching)
                     {
                         await SendAsync(new HeartbeatMessage(), cancellationToken).ConfigureAwait(false);
+
+                        // The connection has stayed up for a whole heartbeat interval and accepted
+                        // a send: it's stable, so a later drop starts backoff from scratch and
+                        // doesn't count against MaxReconnectAttempts. A connection that is accepted
+                        // and then dropped straight away never gets here, so it keeps backing off.
+                        _reconnectAttempts = 0;
                     }
                 }
             }
@@ -352,12 +386,44 @@ namespace Pairiquium
             {
                 // Expected when the search ends.
             }
+            catch (Exception)
+            {
+                // The transport failed or was disposed under us. The receive loop notices a real
+                // drop and handles it; an unobserved exception here would only be noise.
+            }
         }
 
         private Task SendAsync(object message, CancellationToken cancellationToken)
         {
+            IWebSocketTransport transport = _transport;
+            if (transport == null)
+            {
+                throw new InvalidOperationException("There is no open connection to send on.");
+            }
+
             string json = JsonConvert.SerializeObject(message);
-            return _transport.SendAsync(json, cancellationToken);
+            return transport.SendAsync(json, cancellationToken);
+        }
+
+        private bool IsCurrent(IWebSocketTransport transport) => ReferenceEquals(transport, _transport);
+
+        private void DiscardTransport()
+        {
+            StopHeartbeat();
+
+            IWebSocketTransport previous = _transport;
+            _transport = null;
+            previous?.Dispose();
+        }
+
+        // A transport created for an attempt that failed before it was adopted as the current one
+        // would otherwise never be disposed.
+        private void DisposeIfNeverAdopted(IWebSocketTransport transport)
+        {
+            if (transport != null && !IsCurrent(transport))
+            {
+                transport.Dispose();
+            }
         }
 
         private void SetState(MatchmakingConnectionState state)

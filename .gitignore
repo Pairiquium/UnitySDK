@@ -119,3 +119,7 @@ obj/
 # Node (ArenaDuel sample's local backend, package/Samples~/ArenaDuel/Backend~/)
 node_modules/
 .env
+
+# .NET build output from the Core test project
+tests/**/bin/
+tests/**/obj/

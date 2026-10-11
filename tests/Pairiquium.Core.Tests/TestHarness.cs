@@ -20,13 +20,35 @@ namespace Pairiquium.Core.Tests
 
         public int DelayCallCount { get; private set; }
 
+        /// <summary>Every delay the client asked for, in order (heartbeat and backoff alike).</summary>
+        public List<TimeSpan> Delays { get; } = new List<TimeSpan>();
+
+        /// <summary>
+        /// The backoff delays only, i.e. everything except the heartbeat interval.
+        /// </summary>
+        public List<TimeSpan> ReconnectDelays => Delays.FindAll(d => d != Options.HeartbeatInterval);
+
+        /// <summary>
+        /// When true, heartbeat waits never complete, so no connection ever sends a heartbeat and
+        /// none proves itself stable. Backoff waits still resolve instantly.
+        /// </summary>
+        public bool HoldHeartbeats { get; set; }
+
         public TestHarness(FakeTicketProvider ticketProvider = null, MatchmakingClientOptions options = null)
         {
             TicketProvider = ticketProvider ?? new FakeTicketProvider(FakeTicketProvider.MakeTicket());
             Options = options ?? new MatchmakingClientOptions();
-            Options.Delay = async (_, ct) =>
+            Options.Delay = async (delay, ct) =>
             {
                 DelayCallCount++;
+                Delays.Add(delay);
+
+                if (HoldHeartbeats && delay == Options.HeartbeatInterval)
+                {
+                    await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
+                    return;
+                }
+
                 // A real (if tiny) delay: Task.CompletedTask would let the heartbeat/reconnect
                 // loop's await resume synchronously with no actual yield, spinning at 100% CPU
                 // for as long as the loop runs (which, left undisposed, is forever).

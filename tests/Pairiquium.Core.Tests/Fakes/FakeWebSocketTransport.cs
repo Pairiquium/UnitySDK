@@ -22,6 +22,8 @@ namespace Pairiquium.Core.Tests.Fakes
 
         public bool ThrowOnConnect { get; set; }
 
+        public bool IsDisposed { get; private set; }
+
         public TransportState State { get; private set; } = TransportState.None;
 
         public Task ConnectAsync(Uri uri, CancellationToken cancellationToken)
@@ -69,6 +71,7 @@ namespace Pairiquium.Core.Tests.Fakes
 
         public void Dispose()
         {
+            IsDisposed = true;
         }
     }
 }
