@@ -293,8 +293,7 @@ namespace Pairiquium
                 // and an unawaited faulted Task's exception just becomes unobserved. Surface it
                 // through the same ErrorReceived event as any other error, then retry with the
                 // same backoff as a dropped connection rather than duplicating that logic here.
-                string json = JsonConvert.SerializeObject(new { code = ErrorCodes.ConnectionFailed, message = ex.Message });
-                ErrorReceived?.Invoke(JsonConvert.DeserializeObject<ErrorData>(json), false);
+                ErrorReceived?.Invoke(ErrorData.Create(ErrorCodes.ConnectionFailed, ex.Message), false);
                 await HandleUnexpectedCloseAsync(cancellationToken).ConfigureAwait(false);
             }
         }
@@ -389,14 +388,7 @@ namespace Pairiquium
                     break;
 
                 case MatchFoundMessage matchFound:
-                    // The search is finished. Without this, the connection closing later (an idle
-                    // timeout, say) would look like an unexpected drop and reconnect, sending
-                    // begin_search again and queueing a player who was just matched.
-                    _cancelRequested = true;
-                    _beginSearchPending = false;
-                    StopHeartbeat();
-                    SetState(RestState());
-                    MatchFound?.Invoke(matchFound.Data?.Metadata);
+                    HandleMatchFound(matchFound);
                     break;
 
                 case PingMessage ping:
@@ -409,16 +401,7 @@ namespace Pairiquium
                     break;
 
                 case SearchStartedMessage started:
-                    _beginSearchPending = false;
-
-                    // Only a party's leader called BeginSearchAsync; the other members find out here
-                    // and must heartbeat from now on.
-                    if (State != MatchmakingConnectionState.Searching)
-                    {
-                        EnterSearching();
-                    }
-
-                    SearchStarted?.Invoke(started.Data);
+                    HandleSearchStarted(started);
                     break;
 
                 case PartyUpdateMessage update:
@@ -457,27 +440,58 @@ namespace Pairiquium
                     break;
 
                 case ErrorMessage error:
-                    bool terminal = ErrorCodes.IsTerminal(error.Data?.Code);
-                    ErrorReceived?.Invoke(error.Data, terminal);
-
-                    if (terminal)
-                    {
-                        _cancelRequested = true;
-                        StopHeartbeat();
-                        SetState(MatchmakingConnectionState.Faulted);
-                    }
-                    else if (error.Data?.Code == ErrorCodes.StalePong && State == MatchmakingConnectionState.Searching)
-                    {
-                        // PROTOCOL.md section 6: a stale pong should retry begin_search.
-                        await SendAsync(new BeginSearchMessage(_currentGameMode), cancellationToken)
-                            .ConfigureAwait(false);
-                    }
-                    else if (_beginSearchPending && IsSearchRejection(error.Data?.Code))
-                    {
-                        // The server refused (or rolled back) the search, so nothing is queued.
-                        LeaveSearching();
-                    }
+                    await HandleErrorAsync(error, cancellationToken).ConfigureAwait(false);
                     break;
+            }
+        }
+
+        // The search is finished. Without this, the connection closing later (an idle timeout,
+        // say) would look like an unexpected drop and reconnect, sending begin_search again and
+        // queueing a player who was just matched.
+        private void HandleMatchFound(MatchFoundMessage matchFound)
+        {
+            _cancelRequested = true;
+            _beginSearchPending = false;
+            StopHeartbeat();
+            SetState(RestState());
+            MatchFound?.Invoke(matchFound.Data?.Metadata);
+        }
+
+        private void HandleSearchStarted(SearchStartedMessage started)
+        {
+            _beginSearchPending = false;
+
+            // Only a party's leader called BeginSearchAsync; the other members find out here
+            // and must heartbeat from now on.
+            if (State != MatchmakingConnectionState.Searching)
+            {
+                EnterSearching();
+            }
+
+            SearchStarted?.Invoke(started.Data);
+        }
+
+        private async Task HandleErrorAsync(ErrorMessage error, CancellationToken cancellationToken)
+        {
+            bool terminal = ErrorCodes.IsTerminal(error.Data?.Code);
+            ErrorReceived?.Invoke(error.Data, terminal);
+
+            if (terminal)
+            {
+                _cancelRequested = true;
+                StopHeartbeat();
+                SetState(MatchmakingConnectionState.Faulted);
+            }
+            else if (error.Data?.Code == ErrorCodes.StalePong && State == MatchmakingConnectionState.Searching)
+            {
+                // PROTOCOL.md section 6: a stale pong should retry begin_search.
+                await SendAsync(new BeginSearchMessage(_currentGameMode), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else if (_beginSearchPending && IsSearchRejection(error.Data?.Code))
+            {
+                // The server refused (or rolled back) the search, so nothing is queued.
+                LeaveSearching();
             }
         }
 

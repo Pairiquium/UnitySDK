@@ -229,5 +229,12 @@ namespace Pairiquium.Messages
 
         [JsonProperty("details")]
         public IDictionary<string, object> Details { get; private set; }
+
+        // Every property here has a Newtonsoft-only private setter (so a caller can't fabricate
+        // a fake server error), which also rules out a plain object initializer. This is the one
+        // sanctioned way to build an ErrorData that didn't come from the wire - used for
+        // SDK-local synthetic errors such as ErrorCodes.ConnectionFailed.
+        internal static ErrorData Create(string code, string message) =>
+            new ErrorData { Code = code, Message = message };
     }
 }
