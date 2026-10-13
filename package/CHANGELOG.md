@@ -23,6 +23,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Typed error codes for `SEARCH_START_FAILED` and the party errors (`ALREADY_IN_PARTY`,
   `NOT_PARTY_LEADER`, `PARTY_TOO_LARGE`, and the rest).
 
+- Arena Duel sample: a party panel (create, join by code, invite by userId, leave) built in code, so
+  the scene is unchanged. See `Samples~/ArenaDuel/Backend~/README.md`, "Parties".
+
 ### Changed
 
 - Vendored `API-Specs` updated from `v1.0.1` to `v1.1.0` (parties and `SEARCH_STARTED`; additive).

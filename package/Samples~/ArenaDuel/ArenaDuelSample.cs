@@ -27,7 +27,12 @@ namespace Pairiquium.Samples
     /// with it. That one call is the entire seam between "matchmaking" and "the game" - read
     /// ArenaGameController next for what happens on the other side of it.
     ///
-    /// Wires a MatchmakingBehaviour to an HttpTicketProvider pointed at YOUR OWN backend's
+    /// Parties are handled by <see cref="ArenaPartyPanel"/>, which this class creates under the
+    /// lobby canvas; this class only asks it whether the local player may start a search (in a
+    /// party, only the leader may).
+    ///
+    /// Wires a MatchmakingBehaviour to an ArenaTicketProvider (an HttpTicketProvider that also keeps
+    /// the userId) pointed at YOUR OWN backend's
     /// ticket-issuing endpoint (never Pairiquium directly - see HttpTicketProvider's docs). The
     /// Backend~/ folder next to this script is a complete, runnable reference for that backend,
     /// covering ticket issuing AND the match webhook AND the gameplay relay - see its README.md.
@@ -82,6 +87,8 @@ namespace Pairiquium.Samples
         [SerializeField] private ArenaGameController gameController;
 
         private MatchmakingBehaviour _matchmaking;
+        private ArenaPartyPanel _partyPanel;
+        private MatchmakingConnectionState _state = MatchmakingConnectionState.Idle;
         private MatchConnectionClient _connectionClient;
         private CancellationTokenSource _connectionWaitCts;
         private HttpClient _httpClient;
@@ -90,7 +97,7 @@ namespace Pairiquium.Samples
         private void Start()
         {
             _httpClient = new HttpClient();
-            var ticketProvider = new HttpTicketProvider(_httpClient, new System.Uri(ticketEndpointUrl));
+            var ticketProvider = new ArenaTicketProvider(_httpClient, new System.Uri(ticketEndpointUrl));
             _connectionClient = new MatchConnectionClient(_httpClient, backendBaseUrl);
 
             _matchmaking = gameObject.AddComponent<MatchmakingBehaviour>();
@@ -104,10 +111,19 @@ namespace Pairiquium.Samples
             gameController.OnReturnedToLobby -= HandleReturnedToLobby;
             gameController.OnReturnedToLobby += HandleReturnedToLobby;
 
+            // Parties are optional and need the game mode to have them enabled (see Backend~/README.md).
+            // Created under the lobby canvas, so it hides with the lobby when the arena opens.
+            _partyPanel = ArenaPartyPanel.Create(
+                searchButton.GetComponentInParent<Canvas>().transform,
+                _matchmaking,
+                ticketProvider,
+                () => string.IsNullOrEmpty(_selectedRegion) ? null : _selectedRegion);
+            _partyPanel.Changed += RefreshSearchControls;
+
             RefreshRegionHighlights();
             HideFeedbackPanels();
             SetStatus("Idle", NeutralColor);
-            SetSearchControlsInteractable(true);
+            RefreshSearchControls();
         }
 
         // Wired to the region buttons' OnClick() in the sample scene.
@@ -185,13 +201,22 @@ namespace Pairiquium.Samples
                 color = SelectedColor;
             }
             SetStatus(state.ToString(), color);
+            _state = state;
+            RefreshSearchControls();
+        }
 
-            // Only one search can be in flight at a time - keep the buttons honest about that
-            // instead of letting a second click stack a redundant begin_search.
-            bool searching = state == MatchmakingConnectionState.Searching
-                || state == MatchmakingConnectionState.Connecting
-                || state == MatchmakingConnectionState.Reconnecting;
-            SetSearchControlsInteractable(!searching);
+        // Only one search can be in flight at a time - keep the buttons honest about that instead
+        // of letting a second click stack a redundant begin_search. In a party only the leader
+        // searches or cancels; the other members just see the status change when it starts.
+        private void RefreshSearchControls()
+        {
+            bool searching = _state == MatchmakingConnectionState.Searching
+                || _state == MatchmakingConnectionState.Connecting
+                || _state == MatchmakingConnectionState.Reconnecting;
+            bool mayControl = _partyPanel == null || !_partyPanel.InParty || _partyPanel.IsLeader;
+
+            searchButton.interactable = !searching && mayControl;
+            cancelButton.interactable = searching && mayControl;
         }
 
         // THE HANDOFF: matchmaking ends here and the game begins. async void here is the same
@@ -238,8 +263,9 @@ namespace Pairiquium.Samples
         private void HandleReturnedToLobby()
         {
             HideFeedbackPanels();
-            SetStatus("Idle", NeutralColor);
-            SetSearchControlsInteractable(true);
+            // Idle, or Connected if a party kept the matchmaking connection open.
+            SetStatus(_matchmaking.State.ToString(), NeutralColor);
+            RefreshSearchControls();
         }
 
         private void OnError(ErrorData error, bool isTerminal)
@@ -257,7 +283,9 @@ namespace Pairiquium.Samples
 
             Debug.LogWarning($"[Pairiquium] error {error.Code} (terminal={isTerminal}): {error.Message} (details: {details})");
 
-            string prefix = isTerminal ? "Error (search stopped)" : "Error (still searching)";
+            // Not "still searching": party errors (NOT_PARTY_LEADER, PARTY_TOO_LARGE, ...) can arrive
+            // while nothing is searching.
+            string prefix = isTerminal ? "Error (search stopped)" : "Error";
             ShowError($"{prefix}\n{error.Code}: {error.Message}");
 
             // error.ErrorCode is the typed form of error.Code (a plain string) - handle it with a
@@ -299,12 +327,6 @@ namespace Pairiquium.Samples
             matchFoundPanel.SetActive(false);
             errorText.text = text;
             errorPanel.SetActive(true);
-        }
-
-        private void SetSearchControlsInteractable(bool canSearch)
-        {
-            searchButton.interactable = canSearch;
-            cancelButton.interactable = !canSearch;
         }
 
         private void SetStatus(string text, Color color)

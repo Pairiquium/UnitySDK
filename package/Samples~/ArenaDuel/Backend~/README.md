@@ -85,6 +85,28 @@ install Node for Windows (`winget install OpenJS.NodeJS.LTS`, or from nodejs.org
 which makes `localhost` behave identically in both directions for everything including
 WebSockets - a bigger, one-time system change rather than a per-session workaround.)
 
+## Parties
+
+The sample has a party panel (top right of the lobby). Friends create or join a party, the leader
+searches, and the whole party is queued. The backend needs nothing extra for this: parties live
+entirely in Pairiquium, and the match webhook already carries everything the relay uses.
+
+For `ARENA_1V1` (one player per team) set the game mode's **Parties** config in the Pairiquium
+dashboard to: enabled, max size `2`, and **Keep parties together off**. Keeping a party on one
+team can't work when a team is a single player, so with it off two friends in a party are
+guaranteed to land in the same match, which here means they play each other. Then:
+
+1. Both clients pick the **same explicit region** (not Automatic): everyone in a party needs a
+   ticket for the same region.
+2. Client A: **Create party**. Its panel shows a join code and "Your id".
+3. Client B: type the code and **Join with code**, or A types B's id into the invite field (B then
+   sees an invite to accept).
+4. Client A (the leader) presses **Search**. Client B's status flips to Searching and both are
+   matched together.
+
+Only the leader's Search and Cancel buttons are enabled. After the round, both players return to
+the lobby still in the same party and can search again.
+
 ## Running two clients against this backend
 
 This backend doesn't care how many client processes connect — matching is entirely Pairiquium's

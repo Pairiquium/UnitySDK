@@ -34,7 +34,10 @@ ArenaDuel/           Completes the loop: matchmaking -> real webhook handoff -> 
                      you run yourself (Backend~/) -> a live 2-player relayed arena shooter.
                      Split into exactly two classes with one seam between them:
                        ArenaDuelSample     Matchmaking only (region/search/cancel/error UI).
-                                           Mirrors BasicMatchmaking's shape.
+                                           Mirrors BasicMatchmaking's shape. Also hosts the
+                                           party panel (ArenaPartyPanel, uGUI built in code so
+                                           the scene needed no edits; ArenaTicketProvider keeps
+                                           the userId so a client can tell if it is the leader).
                        ArenaGameController Everything from "a relay address is ready" onward -
                                            the arena, the relay connection, round lifecycle,
                                            shooting/health/collision, back-to-lobby.
