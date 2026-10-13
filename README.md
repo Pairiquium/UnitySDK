@@ -42,7 +42,7 @@ Or add the scoped registry manually in `Packages/manifest.json`:
     }
   ],
   "dependencies": {
-    "com.pairiquium.sdk": "1.1.0"
+    "com.pairiquium.sdk": "1.2.0"
   }
 }
 ```
@@ -54,7 +54,7 @@ Or add the scoped registry manually in `Packages/manifest.json`:
 Window → Package Manager → `+` → "Add package from git URL":
 
 ```
-https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.1.0
+https://github.com/Pairiquium/UnitySDK.git?path=/package#v1.2.0
 ```
 
 Requires Unity 2021.3 LTS or newer. Pulls in `com.unity.nuget.newtonsoft-json` as a dependency.
@@ -95,6 +95,32 @@ public class MyMatchmaking : MonoBehaviour
 A fuller example, including handling `SearchSuperseded` and connection state changes, is in the **Basic Matchmaking** sample (Package Manager → Pairiquium Matchmaking SDK → Samples → Import).
 
 The **Arena Duel** sample goes further: it completes the loop Basic Matchmaking deliberately stops short of, actually getting two matched players into a real-time 2D arena shooter against each other, via a local reference backend included with the sample (ticket proxy, the real match webhook, and a gameplay relay - see `Samples~/ArenaDuel/Backend~/README.md`).
+
+## Parties
+
+Friends can queue together. Parties are off by default; turn them on per game mode in the Pairiquium dashboard. Connect first, form the party, then the **leader** searches and the whole party is queued:
+
+```csharp
+await _matchmaking.ConnectAsync();                    // connect without searching
+_matchmaking.OnPartyUpdated.AddListener(party =>      // full state every time: render from it
+    Debug.Log($"{party.Members.Count} in party, code {party.JoinCode}, {party.PartyStatus}"));
+
+await _matchmaking.CreatePartyAsync();                // you are the leader; share party.JoinCode
+// a friend, connected the same way:  await _matchmaking.JoinPartyAsync("K7M2QX");
+// or invite by userId:               await _matchmaking.InviteToPartyAsync("bob");
+//   the invitee gets OnPartyInvite -> AcceptInviteAsync(invite.PartyId)
+
+await _matchmaking.BeginSearchAsync("3v3");           // leader only; every member gets OnSearchStarted
+```
+
+Things to know:
+
+- Everyone in a party needs a ticket for the **same region**: pass the same `preferredRegion` to `ConnectAsync`.
+- Members don't call `BeginSearchAsync`. They get `OnSearchStarted`, and the SDK heartbeats for them.
+- Creating or joining a party cancels a search you had running alone.
+- If a member leaves, is kicked or disconnects mid-search, the search is cancelled for everyone (`OnPartySearchCancelled`). A disconnected player is removed from the party and must rejoin after reconnecting; the SDK does not reconnect a `ConnectAsync` connection for you.
+- After a match the party returns to its lobby on the same connection, ready to search again.
+- Party errors (`NOT_PARTY_LEADER`, `PARTY_TOO_LARGE`, ...) arrive on `OnError` and never close the connection.
 
 ## What `MATCH_FOUND` does and doesn't tell you
 

@@ -19,6 +19,20 @@ namespace Pairiquium.Messages
         StalePong,
         InvalidMessage,
         InternalError,
-        ConnectionFailed
+        ConnectionFailed,
+        SearchStartFailed,
+        AlreadyInParty,
+        NotInParty,
+        PartyNotFound,
+        PartyMemberNotFound,
+        PartyFull,
+        PartySearching,
+        NotPartyLeader,
+        PartiesNotEnabled,
+        PartyTooLarge,
+        PartyMemberAttributeMissing,
+        PartyChanged,
+        PartyInviteeUnavailable,
+        PartyInviteNotFound
     }
 }

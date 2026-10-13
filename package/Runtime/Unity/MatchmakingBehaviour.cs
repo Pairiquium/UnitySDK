@@ -23,6 +23,31 @@ namespace Pairiquium.Unity
     {
     }
 
+    [Serializable]
+    public sealed class SearchStartedUnityEvent : UnityEvent<SearchStartedData>
+    {
+    }
+
+    [Serializable]
+    public sealed class PartyUpdatedUnityEvent : UnityEvent<PartyState>
+    {
+    }
+
+    [Serializable]
+    public sealed class PartyLeftUnityEvent : UnityEvent<PartyLeftData>
+    {
+    }
+
+    [Serializable]
+    public sealed class PartySearchCancelledUnityEvent : UnityEvent<PartySearchCancelledData>
+    {
+    }
+
+    [Serializable]
+    public sealed class PartyInviteUnityEvent : UnityEvent<PartyInviteData>
+    {
+    }
+
     /// <summary>
     /// MonoBehaviour wrapper around <see cref="MatchmakingClient"/>: marshals its events onto
     /// the main thread via <see cref="MainThreadDispatcher"/> and exposes them as UnityEvents so
@@ -39,12 +64,27 @@ namespace Pairiquium.Unity
         [SerializeField] private UnityEvent onSearchSuperseded = new UnityEvent();
         [SerializeField] private MatchmakingStateChangedEvent onStateChanged = new MatchmakingStateChangedEvent();
 
+        [SerializeField] private SearchStartedUnityEvent onSearchStarted = new SearchStartedUnityEvent();
+        [SerializeField] private PartyUpdatedUnityEvent onPartyUpdated = new PartyUpdatedUnityEvent();
+        [SerializeField] private PartyLeftUnityEvent onPartyLeft = new PartyLeftUnityEvent();
+        [SerializeField] private PartySearchCancelledUnityEvent onPartySearchCancelled = new PartySearchCancelledUnityEvent();
+        [SerializeField] private PartyInviteUnityEvent onPartyInvite = new PartyInviteUnityEvent();
+
         private MatchmakingClient _client;
 
         public MatchFoundUnityEvent OnMatchFound => onMatchFound;
         public MatchmakingErrorUnityEvent OnError => onError;
         public UnityEvent OnSearchSuperseded => onSearchSuperseded;
         public MatchmakingStateChangedEvent OnStateChanged => onStateChanged;
+
+        public SearchStartedUnityEvent OnSearchStarted => onSearchStarted;
+        public PartyUpdatedUnityEvent OnPartyUpdated => onPartyUpdated;
+        public PartyLeftUnityEvent OnPartyLeft => onPartyLeft;
+        public PartySearchCancelledUnityEvent OnPartySearchCancelled => onPartySearchCancelled;
+        public PartyInviteUnityEvent OnPartyInvite => onPartyInvite;
+
+        /// <summary>The party you are in, or null. Only touch it from the main thread, like the events.</summary>
+        public PartyState Party => _client?.Party;
 
         public MatchmakingConnectionState State => _client?.State ?? MatchmakingConnectionState.Idle;
 
@@ -75,10 +115,38 @@ namespace Pairiquium.Unity
             _client.ErrorReceived += (data, isTerminal) => Dispatch(() => onError.Invoke(data, isTerminal));
             _client.SearchSuperseded += () => Dispatch(() => onSearchSuperseded.Invoke());
             _client.StateChanged += state => Dispatch(() => onStateChanged.Invoke(state));
+            _client.SearchStarted += data => Dispatch(() => onSearchStarted.Invoke(data));
+            _client.PartyUpdated += party => Dispatch(() => onPartyUpdated.Invoke(party));
+            _client.PartyLeft += data => Dispatch(() => onPartyLeft.Invoke(data));
+            _client.PartySearchCancelled += data => Dispatch(() => onPartySearchCancelled.Invoke(data));
+            _client.PartyInviteReceived += data => Dispatch(() => onPartyInvite.Invoke(data));
         }
 
         public Task BeginSearchAsync(string gameMode, string preferredRegion = null) =>
             RequireClient().BeginSearchAsync(gameMode, preferredRegion);
+
+        /// <summary>
+        /// Connects without searching, for forming a party first; see
+        /// <see cref="MatchmakingClient.ConnectAsync"/>. Call <see cref="BeginSearchAsync"/> on the
+        /// same component afterwards (the party leader's call queues the whole party).
+        /// </summary>
+        public Task ConnectAsync(string preferredRegion = null) => RequireClient().ConnectAsync(preferredRegion);
+
+        public Task CreatePartyAsync() => RequireClient().CreatePartyAsync();
+
+        public Task JoinPartyAsync(string code) => RequireClient().JoinPartyAsync(code);
+
+        public Task LeavePartyAsync() => RequireClient().LeavePartyAsync();
+
+        public Task KickMemberAsync(string userId) => RequireClient().KickMemberAsync(userId);
+
+        public Task PromoteLeaderAsync(string userId) => RequireClient().PromoteLeaderAsync(userId);
+
+        public Task InviteToPartyAsync(string userId) => RequireClient().InviteToPartyAsync(userId);
+
+        public Task AcceptInviteAsync(string partyId) => RequireClient().AcceptInviteAsync(partyId);
+
+        public Task DeclineInviteAsync(string partyId) => RequireClient().DeclineInviteAsync(partyId);
 
         public Task CancelSearchAsync() => RequireClient().CancelSearchAsync();
 

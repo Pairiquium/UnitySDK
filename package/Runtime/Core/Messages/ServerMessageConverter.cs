@@ -33,6 +33,16 @@ namespace Pairiquium.Messages
                     return obj.ToObject<MatchFoundMessage>(serializer);
                 case "PING":
                     return obj.ToObject<PingMessage>(serializer);
+                case "SEARCH_STARTED":
+                    return obj.ToObject<SearchStartedMessage>(serializer);
+                case "PARTY_UPDATE":
+                    return obj.ToObject<PartyUpdateMessage>(serializer);
+                case "PARTY_LEFT":
+                    return obj.ToObject<PartyLeftMessage>(serializer);
+                case "PARTY_SEARCH_CANCELLED":
+                    return obj.ToObject<PartySearchCancelledMessage>(serializer);
+                case "PARTY_INVITE":
+                    return obj.ToObject<PartyInviteMessage>(serializer);
                 case "SEARCH_SUPERSEDED":
                     return obj.ToObject<SearchSupersededMessage>(serializer);
                 case "CLOSE_CONNECTION":

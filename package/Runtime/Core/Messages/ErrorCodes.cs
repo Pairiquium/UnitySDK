@@ -19,6 +19,24 @@ namespace Pairiquium.Messages
         public const string InvalidMessage = "INVALID_MESSAGE";
         public const string InternalError = "INTERNAL_ERROR";
 
+        /// <summary>The search couldn't be queued and was rolled back; nothing is searching. Safe to retry.</summary>
+        public const string SearchStartFailed = "SEARCH_START_FAILED";
+
+        // Party errors. None close the connection.
+        public const string AlreadyInParty = "ALREADY_IN_PARTY";
+        public const string NotInParty = "NOT_IN_PARTY";
+        public const string PartyNotFound = "PARTY_NOT_FOUND";
+        public const string PartyMemberNotFound = "PARTY_MEMBER_NOT_FOUND";
+        public const string PartyFull = "PARTY_FULL";
+        public const string PartySearching = "PARTY_SEARCHING";
+        public const string NotPartyLeader = "NOT_PARTY_LEADER";
+        public const string PartiesNotEnabled = "PARTIES_NOT_ENABLED";
+        public const string PartyTooLarge = "PARTY_TOO_LARGE";
+        public const string PartyMemberAttributeMissing = "PARTY_MEMBER_ATTRIBUTE_MISSING";
+        public const string PartyChanged = "PARTY_CHANGED";
+        public const string PartyInviteeUnavailable = "PARTY_INVITEE_UNAVAILABLE";
+        public const string PartyInviteNotFound = "PARTY_INVITE_NOT_FOUND";
+
         /// <summary>
         /// SDK-local, never sent by the server: PROTOCOL.md section 6's codes are all in-band
         /// ERROR messages that presuppose a connection already exists. This one covers the gap
@@ -65,6 +83,20 @@ namespace Pairiquium.Messages
                 case StalePong: return PairiquiumErrorCode.StalePong;
                 case InvalidMessage: return PairiquiumErrorCode.InvalidMessage;
                 case InternalError: return PairiquiumErrorCode.InternalError;
+                case SearchStartFailed: return PairiquiumErrorCode.SearchStartFailed;
+                case AlreadyInParty: return PairiquiumErrorCode.AlreadyInParty;
+                case NotInParty: return PairiquiumErrorCode.NotInParty;
+                case PartyNotFound: return PairiquiumErrorCode.PartyNotFound;
+                case PartyMemberNotFound: return PairiquiumErrorCode.PartyMemberNotFound;
+                case PartyFull: return PairiquiumErrorCode.PartyFull;
+                case PartySearching: return PairiquiumErrorCode.PartySearching;
+                case NotPartyLeader: return PairiquiumErrorCode.NotPartyLeader;
+                case PartiesNotEnabled: return PairiquiumErrorCode.PartiesNotEnabled;
+                case PartyTooLarge: return PairiquiumErrorCode.PartyTooLarge;
+                case PartyMemberAttributeMissing: return PairiquiumErrorCode.PartyMemberAttributeMissing;
+                case PartyChanged: return PairiquiumErrorCode.PartyChanged;
+                case PartyInviteeUnavailable: return PairiquiumErrorCode.PartyInviteeUnavailable;
+                case PartyInviteNotFound: return PairiquiumErrorCode.PartyInviteNotFound;
                 case ConnectionFailed: return PairiquiumErrorCode.ConnectionFailed;
                 default: return PairiquiumErrorCode.Unknown;
             }

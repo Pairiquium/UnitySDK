@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.Json.Nodes;
 using Json.Schema;
 using Newtonsoft.Json;
@@ -118,6 +119,93 @@ namespace Pairiquium.Core.Tests
 
             var message = JsonConvert.DeserializeObject<ErrorMessage>(json);
             Assert.That(message.Data.Code, Is.EqualTo(ErrorCodes.GameModeNotFound));
+        }
+
+        // --- Parties (spec 1.1.0). ---
+
+        [Test]
+        public void PartyClientMessages_ConformToSchema()
+        {
+            AssertValid(LoadAsyncApiMessageSchema("createParty"), JsonConvert.SerializeObject(new CreatePartyMessage()));
+            AssertValid(LoadAsyncApiMessageSchema("leaveParty"), JsonConvert.SerializeObject(new LeavePartyMessage()));
+            AssertValid(LoadAsyncApiMessageSchema("joinParty"), JsonConvert.SerializeObject(new JoinPartyMessage("K7M2QX")));
+            AssertValid(LoadAsyncApiMessageSchema("kickMember"), JsonConvert.SerializeObject(new PartyUserMessage("kick_member", "bob")));
+            AssertValid(LoadAsyncApiMessageSchema("promoteLeader"), JsonConvert.SerializeObject(new PartyUserMessage("promote_leader", "bob")));
+            AssertValid(LoadAsyncApiMessageSchema("inviteToParty"), JsonConvert.SerializeObject(new PartyUserMessage("invite_to_party", "bob")));
+            AssertValid(LoadAsyncApiMessageSchema("acceptInvite"), JsonConvert.SerializeObject(new PartyInviteReplyMessage("accept_invite", "p-1")));
+            AssertValid(LoadAsyncApiMessageSchema("declineInvite"), JsonConvert.SerializeObject(new PartyInviteReplyMessage("decline_invite", "p-1")));
+        }
+
+        [Test]
+        public void SearchStarted_SampleConformsAndDeserializes()
+        {
+            const string json = "{\"action\":\"SEARCH_STARTED\",\"data\":{\"gameMode\":\"3v3\",\"startedAt\":1700000000.5,\"partyId\":\"p-1\"}}";
+            AssertValid(LoadAsyncApiMessageSchema("searchStarted"), json);
+
+            var message = JsonConvert.DeserializeObject<SearchStartedMessage>(json);
+            Assert.That(message.Data.GameMode, Is.EqualTo("3v3"));
+            Assert.That(message.Data.StartedAt, Is.EqualTo(1700000000.5));
+            Assert.That(message.Data.PartyId, Is.EqualTo("p-1"));
+        }
+
+        [Test]
+        public void PartyUpdate_SampleConformsAndDeserializes()
+        {
+            const string json = "{\"action\":\"PARTY_UPDATE\",\"data\":{\"party\":{\"partyId\":\"p-1\",\"joinCode\":\"K7M2QX\"," +
+                "\"leaderUserId\":\"alice\",\"members\":[{\"userId\":\"alice\"}],\"status\":\"STARTING\",\"gameMode\":\"ranked\"}}}";
+            AssertValid(LoadAsyncApiMessageSchema("partyUpdate"), json);
+
+            PartyState party = JsonConvert.DeserializeObject<PartyUpdateMessage>(json).Data.Party;
+            Assert.That(party.PartyStatus, Is.EqualTo(PartyStatus.Starting));
+            Assert.That(party.GameMode, Is.EqualTo("ranked"));
+            Assert.That(party.Members[0].UserId, Is.EqualTo("alice"));
+        }
+
+        [Test]
+        public void PartyLeft_SampleConformsAndDeserializes()
+        {
+            const string json = "{\"action\":\"PARTY_LEFT\",\"data\":{\"partyId\":\"p-1\",\"reason\":\"KICKED\"}}";
+            AssertValid(LoadAsyncApiMessageSchema("partyLeft"), json);
+            Assert.That(JsonConvert.DeserializeObject<PartyLeftMessage>(json).Data.Reason, Is.EqualTo("KICKED"));
+        }
+
+        [Test]
+        public void PartySearchCancelled_SampleConformsAndDeserializes()
+        {
+            const string json = "{\"action\":\"PARTY_SEARCH_CANCELLED\",\"data\":{\"reason\":\"MEMBER_LEFT\",\"userId\":\"bob\"}}";
+            AssertValid(LoadAsyncApiMessageSchema("partySearchCancelled"), json);
+
+            PartySearchCancelledData data = JsonConvert.DeserializeObject<PartySearchCancelledMessage>(json).Data;
+            Assert.That(data.Reason, Is.EqualTo("MEMBER_LEFT"));
+            Assert.That(data.UserId, Is.EqualTo("bob"));
+        }
+
+        [Test]
+        public void PartyInvite_SampleConformsAndDeserializes()
+        {
+            const string json = "{\"action\":\"PARTY_INVITE\",\"data\":{\"partyId\":\"p-1\",\"fromUserId\":\"alice\"}}";
+            AssertValid(LoadAsyncApiMessageSchema("partyInvite"), json);
+
+            PartyInviteData data = JsonConvert.DeserializeObject<PartyInviteMessage>(json).Data;
+            Assert.That(data.PartyId, Is.EqualTo("p-1"));
+            Assert.That(data.FromUserId, Is.EqualTo("alice"));
+        }
+
+        [Test]
+        public void EveryErrorCodeNamedInTheSpec_IsKnownToTheSdk()
+        {
+            string description = (string)JsonNode.Parse(File.ReadAllText(
+                Path.Combine(TestContext.CurrentContext.TestDirectory, "spec", "asyncapi.json")))
+                ["components"]["messages"]["error"]["description"];
+
+            var codes = System.Text.RegularExpressions.Regex.Matches(description, "`([A-Z_]{4,})`")
+                .Select(m => m.Groups[1].Value)
+                .Distinct();
+
+            foreach (string code in codes)
+            {
+                Assert.That(ErrorCodes.Parse(code), Is.Not.EqualTo(PairiquiumErrorCode.Unknown), code);
+            }
         }
 
         // --- Ticket response (openapi.json): the shape HttpTicketProvider parses. ---
