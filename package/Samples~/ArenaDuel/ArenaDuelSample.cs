@@ -27,9 +27,11 @@ namespace Pairiquium.Samples
     /// with it. That one call is the entire seam between "matchmaking" and "the game" - read
     /// ArenaGameController next for what happens on the other side of it.
     ///
-    /// Parties are handled by <see cref="ArenaPartyPanel"/>, which this class creates under the
-    /// lobby canvas; this class only asks it whether the local player may start a search (in a
-    /// party, only the leader may).
+    /// Before any of that, <see cref="ArenaUsernamePanel"/> gates the whole lobby behind a
+    /// "choose a username" step - the id a party invite needs is otherwise a random string
+    /// nobody can read and share. Parties themselves are handled by <see cref="ArenaPartyPanel"/>,
+    /// which this class creates under the lobby canvas; this class only asks it whether the local
+    /// player may start a search (in a party, only the leader may).
     ///
     /// Wires a MatchmakingBehaviour to an ArenaTicketProvider (an HttpTicketProvider that also keeps
     /// the userId) pointed at YOUR OWN backend's
@@ -119,6 +121,13 @@ namespace Pairiquium.Samples
                 ticketProvider,
                 () => string.IsNullOrEmpty(_selectedRegion) ? null : _selectedRegion);
             _partyPanel.Changed += RefreshSearchControls;
+
+            // Created last so it's the topmost sibling under the canvas: its full-screen
+            // background blocks clicks to everything above (region/search/party) until the
+            // player picks a username, which ArenaTicketProvider then uses as its userId - see
+            // ArenaUsernamePanel's doc comment for why that's needed for party invites.
+            ArenaUsernamePanel.Create(
+                searchButton.GetComponentInParent<Canvas>().transform, ticketProvider, RefreshSearchControls);
 
             RefreshRegionHighlights();
             HideFeedbackPanels();

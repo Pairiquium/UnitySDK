@@ -29,6 +29,15 @@ namespace Pairiquium.Samples
         /// <summary>The userId of the most recently minted ticket, or null before the first.</summary>
         public string UserId { get; private set; }
 
+        /// <summary>
+        /// Set this before the first <see cref="GetTicketAsync"/> call (see
+        /// <see cref="ArenaUsernamePanel"/>) to ask Backend~ to use it as the userId instead of
+        /// inventing a random one - needed so a player has a stable, human-typeable id to give a
+        /// friend for party invites. Null/empty means "no preference", same as
+        /// <paramref name="preferredRegion"/> below: Backend~ falls back to a random id.
+        /// </summary>
+        public string Username { get; set; }
+
         public ArenaTicketProvider(HttpClient httpClient, Uri endpoint)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -39,9 +48,13 @@ namespace Pairiquium.Samples
         {
             using (var request = new HttpRequestMessage(HttpMethod.Post, _endpoint))
             {
-                if (!string.IsNullOrEmpty(preferredRegion))
+                if (!string.IsNullOrEmpty(preferredRegion) || !string.IsNullOrEmpty(Username))
                 {
-                    string json = JsonConvert.SerializeObject(new { preferredRegion });
+                    string json = JsonConvert.SerializeObject(new
+                    {
+                        preferredRegion = string.IsNullOrEmpty(preferredRegion) ? null : preferredRegion,
+                        username = string.IsNullOrEmpty(Username) ? null : Username,
+                    });
                     request.Content = new StringContent(json, Encoding.UTF8, "application/json");
                 }
 

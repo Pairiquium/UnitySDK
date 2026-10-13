@@ -87,20 +87,30 @@ WebSockets - a bigger, one-time system change rather than a per-session workarou
 
 ## Parties
 
-The sample has a party panel (top right of the lobby). Friends create or join a party, the leader
-searches, and the whole party is queued. The backend needs nothing extra for this: parties live
-entirely in Pairiquium, and the match webhook already carries everything the relay uses.
+The lobby opens behind a **username** gate: the sample won't let you touch region/search/party
+controls until you pick one. This isn't a Pairiquium concept - it's this backend's `/matchmaking/
+ticket` accepting an optional `username` and using it as the real userId instead of inventing a
+random one (see `handleTicketRequest` in `arena-backend.js`), so that a party invite has a stable,
+human-typeable id to target instead of a string nobody can read off screen in time to share it.
+
+The sample has a party panel (top right of the lobby, reachable once you're past the username
+gate). Friends create or join a party, the leader searches, and the whole party is queued. The
+backend needs nothing else for this: parties live entirely in Pairiquium, and the match webhook
+already carries everything the relay uses.
 
 For `ARENA_1V1` (one player per team) set the game mode's **Parties** config in the Pairiquium
 dashboard to: enabled, max size `2`, and **Keep parties together off**. Keeping a party on one
 team can't work when a team is a single player, so with it off two friends in a party are
 guaranteed to land in the same match, which here means they play each other. Then:
 
-1. Both clients pick the **same explicit region** (not Automatic): everyone in a party needs a
-   ticket for the same region.
-2. Client A: **Create party**. Its panel shows a join code and "Your id".
-3. Client B: type the code and **Join with code**, or A types B's id into the invite field (B then
-   sees an invite to accept).
+1. Both clients pick a username (letters/numbers/`-`/`_`, 1-24 characters) at the lobby gate, and
+   the **same explicit region** (not Automatic) once inside: everyone in a party needs a ticket
+   for the same region. Two clients picking the *same* username both become that userId - fine
+   for solo testing against yourself, but pick different ones once you're testing with a friend.
+2. Client A: **Create party**. Its panel shows a join code and "Your id" (now the username you
+   chose, not a random string).
+3. Client B: type the code and **Join with code**, or A types B's username into the invite field
+   (B then sees an invite to accept).
 4. Client A (the leader) presses **Search**. Client B's status flips to Searching and both are
    matched together.
 

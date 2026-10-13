@@ -142,23 +142,43 @@ function connectionPayloadFor(matchId, team) {
 // ---------------------------------------------------------------------------------------------
 // 1. Ticket proxy - POST /matchmaking/ticket
 // Same contract as mock-ticket-backend.js in the Pairiquium repo: inject a userId server-side
-// (the client never supplies one), call the real POST /v1/tickets with the secret API key, relay
-// the response back unmodified. The one addition is echoing userId back too - HttpTicketProvider
-// only reads ticket/wsEndpoint and ignores unknown fields, so this is purely additive and useful
-// for correlating logs; it is NOT how the webhook learns participant identity (Pairiquium already
-// knows the userId it minted the ticket for).
+// (the client never supplies one as far as Pairiquium is concerned), call the real
+// POST /v1/tickets with the secret API key, relay the response back unmodified. The one addition
+// is echoing userId back too - HttpTicketProvider only reads ticket/wsEndpoint and ignores
+// unknown fields, so this is purely additive and useful for correlating logs; it is NOT how the
+// webhook learns participant identity (Pairiquium already knows the userId it minted the ticket
+// for).
+//
+// Parties need a userId a human can actually read out and type into a friend's "invite by
+// username" box, so this also accepts an optional client-chosen "username" and uses it AS the
+// userId when present (validated below) instead of inventing a random one. Still falls back to a
+// random id if the client doesn't send one, so this stays backwards compatible with anything that
+// doesn't ask the player for a name first.
+//
+// No uniqueness check: two clients picking the same username both mint tickets for that same
+// userId. A real game wouldn't hit this (usernames would come from your own authenticated
+// accounts, already unique) - acceptable for a local demo backend, not something to copy as-is.
 // ---------------------------------------------------------------------------------------------
+
+const USERNAME_PATTERN = /^[A-Za-z0-9_-]{1,24}$/;
 
 async function handleTicketRequest(req, res) {
   let clientPreferredRegion = null;
+  let clientUsername = null;
   try {
-    const body = await readJsonBody(req);
-    clientPreferredRegion = body.preferredRegion || null;
+    const parsedBody = await readJsonBody(req);
+    clientPreferredRegion = parsedBody.preferredRegion || null;
+    clientUsername = parsedBody.username || null;
   } catch {
-    // Malformed/empty body from the client - fine, just means no region override.
+    // Malformed/empty body from the client - fine, just means no region override/username.
   }
 
-  const userId = `unity-${crypto.randomUUID().slice(0, 8)}`;
+  if (clientUsername !== null && !USERNAME_PATTERN.test(clientUsername)) {
+    sendJson(res, 400, { error: 'username must be 1-24 characters, letters/numbers/-/_ only' });
+    return;
+  }
+
+  const userId = clientUsername || `unity-${crypto.randomUUID().slice(0, 8)}`;
   const body = { userId };
   if (clientPreferredRegion) {
     body.preferredRegion = clientPreferredRegion;

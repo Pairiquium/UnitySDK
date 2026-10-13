@@ -23,8 +23,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Typed error codes for `SEARCH_START_FAILED` and the party errors (`ALREADY_IN_PARTY`,
   `NOT_PARTY_LEADER`, `PARTY_TOO_LARGE`, and the rest).
 
-- Arena Duel sample: a party panel (create, join by code, invite by userId, leave) built in code, so
-  the scene is unchanged. See `Samples~/ArenaDuel/Backend~/README.md`, "Parties".
+- Arena Duel sample: a party panel (create, join by code, invite by username, leave) built in code,
+  so the scene is unchanged. See `Samples~/ArenaDuel/Backend~/README.md`, "Parties".
+- Arena Duel sample: a username gate shown before the rest of the lobby. Backend~'s
+  `/matchmaking/ticket` now accepts an optional `username` and uses it as the userId instead of a
+  random one, so a party invite has a stable, human-typeable id to target.
 
 ### Changed
 
