@@ -103,10 +103,14 @@ dashboard to: enabled, max size `2`, and **Keep parties together off**. Keeping 
 team can't work when a team is a single player, so with it off two friends in a party are
 guaranteed to land in the same match, which here means they play each other. Then:
 
-1. Both clients pick a username (letters/numbers/`-`/`_`, 1-24 characters) at the lobby gate, and
-   the **same explicit region** (not Automatic) once inside: everyone in a party needs a ticket
-   for the same region. Two clients picking the *same* username both become that userId - fine
-   for solo testing against yourself, but pick different ones once you're testing with a friend.
+1. Both clients pick a **different** username (letters/numbers/`-`/`_`, 1-24 characters) at the
+   lobby gate, and the **same explicit region** (not Automatic) once inside: everyone in a party
+   needs a ticket for the same region. Don't reuse a username between the two clients, even for
+   solo testing against yourself: the username becomes the real userId sent to Pairiquium, and
+   `MatchmakingClient.BeginSearchAsync`'s own contract is that a second search for the same userId
+   *takes over* the first connection's search (the first gets `SearchSuperseded`) rather than
+   letting the two queue side by side - so two clients sharing a username can never be matched
+   against each other.
 2. Client A: **Create party**. Its panel shows a join code and "Your id" (now the username you
    chose, not a random string).
 3. Client B: type the code and **Join with code**, or A types B's username into the invite field
