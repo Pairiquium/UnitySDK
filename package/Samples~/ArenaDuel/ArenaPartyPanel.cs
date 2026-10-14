@@ -39,7 +39,14 @@ namespace Pairiquium.Samples
         private GameObject _inviteRow;
         private Text _inviteText;
         private PartyInviteData _pendingInvite;
+        private float _pendingInviteReceivedAt;
         private Button[] _lobbyButtons;
+
+        // PROTOCOL.md section 8: "invites expire after 2 minutes". Mirrored here so a long-stale
+        // invite (received, then never accepted/declined because the player was busy elsewhere -
+        // e.g. already in a different party) stops being offered client-side instead of only
+        // failing with PARTY_INVITE_NOT_FOUND once tapped.
+        private const float InviteExpirySeconds = 120f;
 
         /// <summary>Raised whenever party membership or leadership may have changed.</summary>
         public event Action Changed;
@@ -65,6 +72,9 @@ namespace Pairiquium.Samples
             matchmaking.OnPartyUpdated.AddListener(_ => panel.Refresh());
             matchmaking.OnPartyLeft.AddListener(data =>
             {
+                // Any invite received before this leave is stale by now - don't let it resurface
+                // for a party that's no longer current.
+                panel._pendingInvite = null;
                 panel._noticeText.text = data.Reason == "KICKED" ? "You were removed from the party." : string.Empty;
                 panel.Refresh();
             });
@@ -75,9 +85,23 @@ namespace Pairiquium.Samples
             matchmaking.OnPartyInvite.AddListener(invite =>
             {
                 panel._pendingInvite = invite;
+                panel._pendingInviteReceivedAt = Time.realtimeSinceStartup;
                 panel.Refresh();
             });
-            matchmaking.OnStateChanged.AddListener(_ => panel.Refresh());
+            matchmaking.OnStateChanged.AddListener(state =>
+            {
+                // A dropped/closed connection has nothing left to accept an invite on - the server
+                // already discarded this client's party membership too (see MatchmakingClient's
+                // ConnectAsync doc comment), so don't let a stale invite outlive the connection it
+                // arrived on.
+                if (state == MatchmakingConnectionState.Closed || state == MatchmakingConnectionState.Faulted
+                    || state == MatchmakingConnectionState.Idle)
+                {
+                    panel._pendingInvite = null;
+                }
+
+                panel.Refresh();
+            });
             panel.Refresh();
             return panel;
         }
@@ -160,6 +184,11 @@ namespace Pairiquium.Samples
             foreach (Button button in _lobbyButtons)
             {
                 button.interactable = !locked;
+            }
+
+            if (_pendingInvite != null && Time.realtimeSinceStartup - _pendingInviteReceivedAt > InviteExpirySeconds)
+            {
+                _pendingInvite = null;
             }
 
             _inviteRow.SetActive(_pendingInvite != null && party == null);

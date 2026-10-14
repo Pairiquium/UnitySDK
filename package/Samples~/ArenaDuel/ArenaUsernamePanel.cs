@@ -19,9 +19,14 @@ namespace Pairiquium.Samples
     /// as that userId instead (see <see cref="ArenaTicketProvider.Username"/>), so "invite by
     /// username" means what it says.
     ///
-    /// Blocking is just z-order: this panel is created last among the lobby's children, so uGUI
-    /// raycasts hit its full-screen background before anything behind it - no need to separately
-    /// disable every other control while this is up.
+    /// Blocking pointer input is just z-order: this panel is created last among the lobby's
+    /// children, so uGUI raycasts hit its full-screen background before anything behind it. That
+    /// alone doesn't stop keyboard/gamepad navigation (the Input System UI module this sample
+    /// uses can still Tab onto and activate a Selectable that raycasts never reach), so this also
+    /// drives a <see cref="CanvasGroup"/> on <c>lobbyCanvas</c> itself: <c>interactable = false</c>
+    /// while the gate is up blocks every other control's navigation/activation too, not just
+    /// pointer clicks. This panel's own GameObject gets its own CanvasGroup with
+    /// <c>ignoreParentGroups = true</c> so its Confirm button isn't disabled by that same group.
     /// </summary>
     internal sealed class ArenaUsernamePanel : MonoBehaviour
     {
@@ -31,6 +36,7 @@ namespace Pairiquium.Samples
 
         private ArenaTicketProvider _tickets;
         private Action _onConfirmed;
+        private CanvasGroup _lobbyGroup;
         private InputField _usernameInput;
         private Text _errorText;
 
@@ -41,6 +47,19 @@ namespace Pairiquium.Samples
             var panel = go.AddComponent<ArenaUsernamePanel>();
             panel._tickets = tickets;
             panel._onConfirmed = onConfirmed;
+
+            // Disables every other lobby control's navigation/activation, not just pointer clicks
+            // (see class doc comment). Not this panel's own group: it isn't created yet, and this
+            // one covers whatever already exists under lobbyCanvas (region/search/party controls).
+            CanvasGroup lobbyGroup = lobbyCanvas.GetComponent<CanvasGroup>();
+            if (lobbyGroup == null)
+            {
+                lobbyGroup = lobbyCanvas.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            lobbyGroup.interactable = false;
+            panel._lobbyGroup = lobbyGroup;
+
             panel.Build();
             return panel;
         }
@@ -51,6 +70,11 @@ namespace Pairiquium.Samples
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = rect.offsetMax = Vector2.zero;
+
+            // Exempts this panel from _lobbyGroup.interactable = false - otherwise its own
+            // Confirm button would be disabled by the exact group it's meant to gate behind.
+            CanvasGroup ownGroup = gameObject.AddComponent<CanvasGroup>();
+            ownGroup.ignoreParentGroups = true;
 
             // Covers the whole canvas and is the last sibling built, so it sits on top of and
             // blocks raycasts to every other lobby control until Confirm() hides it.
@@ -100,6 +124,7 @@ namespace Pairiquium.Samples
             }
 
             _tickets.Username = name;
+            _lobbyGroup.interactable = true;
             gameObject.SetActive(false);
             _onConfirmed?.Invoke();
         }

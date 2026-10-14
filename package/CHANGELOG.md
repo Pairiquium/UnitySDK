@@ -24,10 +24,15 @@ adheres to [Semantic Versioning](https://semver.org/).
   `NOT_PARTY_LEADER`, `PARTY_TOO_LARGE`, and the rest).
 
 - Arena Duel sample: a party panel (create, join by code, invite by username, leave) built in code,
-  so the scene is unchanged. See `Samples~/ArenaDuel/Backend~/README.md`, "Parties".
+  so the scene is unchanged. See `Samples~/ArenaDuel/Backend~/README.md`, "Parties". A received
+  invite is discarded (not just hidden) once it's no longer actionable - leaving the inviting
+  party, or the connection closing - and expires client-side after the same 2 minutes PROTOCOL.md
+  documents server-side, instead of silently resurfacing stale and failing with
+  `PARTY_INVITE_NOT_FOUND` if accepted.
 - Arena Duel sample: a username gate shown before the rest of the lobby. Backend~'s
   `/matchmaking/ticket` now accepts an optional `username` and uses it as the userId instead of a
-  random one, so a party invite has a stable, human-typeable id to target.
+  random one, so a party invite has a stable, human-typeable id to target. Blocks keyboard/gamepad
+  navigation into the rest of the lobby while it's up, not only pointer clicks.
 
 ### Changed
 
