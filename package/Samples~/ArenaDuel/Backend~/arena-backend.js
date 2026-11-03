@@ -8,8 +8,8 @@
 //   3. Connection handoff   GET  /matches/:matchId/connection - long-poll: "where's my relay?"
 //   4. Game relay           GET  /relay (WebSocket upgrade)   - dumb forward, client-authoritative
 //
-// This is a LOCAL DEV / DEMO tool only: no auth anywhere (the webhook itself is unsigned per
-// PROTOCOL.md section 5), no persistence (everything lives in memory for the process's
+// This is a LOCAL DEV / DEMO tool only: no auth on its own endpoints (the match webhook is
+// signature-verified when WEBHOOK_SECRET is set, per PROTOCOL.md section 5), no persistence (everything lives in memory for the process's
 // lifetime), and it is reached from the public internet only through a temporary tunnel (ngrok
 // or similar) you point at it yourself. Never treat this as a production pattern - see this
 // folder's README.md for what a real implementation would need on top.
@@ -38,6 +38,7 @@ function parseArgs() {
     httpUrl: process.env.HTTP_URL,
     apiKey: process.env.API_KEY,
     port: parseInt(process.env.PORT, 10) || 8787,
+    webhookSecret: process.env.WEBHOOK_SECRET,
   };
 
   for (let i = 2; i < process.argv.length; i++) {
@@ -57,6 +58,10 @@ function parseArgs() {
         args.port = parseInt(next, 10);
         i++;
         break;
+      case '--webhook-secret':
+        args.webhookSecret = next;
+        i++;
+        break;
       case '--help':
         console.log(`
 Usage: node arena-backend.js [options]
@@ -65,9 +70,10 @@ Options:
   --http-url <url>  HTTP API URL for ticket generation
   --api-key <key>   API key for ticket generation
   --port <n>        Local port to listen on (default: 8787)
+  --webhook-secret <s>  Game mode's webhook signing secret (verifies Pairiquium-Signature)
 
 Environment variables:
-  HTTP_URL, API_KEY, PORT
+  HTTP_URL, API_KEY, PORT, WEBHOOK_SECRET
 
 Point the Unity sample's ArenaDuelSample.ticketEndpointUrl at:
   http://localhost:<port>/matchmaking/ticket
@@ -90,6 +96,10 @@ if (!config.httpUrl || !config.apiKey) {
   process.exit(1);
 }
 
+if (!config.webhookSecret) {
+  console.warn('Warning: WEBHOOK_SECRET not set - webhook signatures will NOT be verified (dev only)');
+}
+
 function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
@@ -99,13 +109,46 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-async function readJsonBody(req) {
+async function readRawBody(req) {
   const chunks = [];
   for await (const chunk of req) {
     chunks.push(chunk);
   }
-  const raw = Buffer.concat(chunks).toString('utf8');
-  return raw ? JSON.parse(raw) : {};
+  return Buffer.concat(chunks);
+}
+
+function parseJson(raw) {
+  const text = raw.toString('utf8');
+  return text ? JSON.parse(text) : {};
+}
+
+async function readJsonBody(req) {
+  return parseJson(await readRawBody(req));
+}
+
+const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
+
+/**
+ * Verifies a Pairiquium-Signature header (`t=<unix seconds>,v1=<hex>`, PROTOCOL.md section 5)
+ * against the RAW request body. Returns null when valid, otherwise a reason string.
+ */
+function verifyWebhookSignature(header, rawBody, secret) {
+  if (!header) return 'missing Pairiquium-Signature header';
+  const parts = {};
+  for (const kv of String(header).split(',')) {
+    const i = kv.indexOf('=');
+    if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
+  }
+  const t = parseInt(parts.t, 10);
+  if (!Number.isFinite(t) || !parts.v1) return 'malformed Pairiquium-Signature header';
+  if (Math.abs(Date.now() / 1000 - t) > SIGNATURE_TOLERANCE_SECONDS) return 'timestamp outside tolerance';
+
+  const expected = crypto.createHmac('sha256', secret).update(`${t}.`).update(rawBody).digest();
+  const actual = Buffer.from(parts.v1, 'hex');
+  if (actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) {
+    return 'signature mismatch';
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -222,9 +265,20 @@ async function handleTicketRequest(req, res) {
 // ---------------------------------------------------------------------------------------------
 
 async function handleWebhookRequest(req, res) {
+  const raw = await readRawBody(req);
+
+  if (config.webhookSecret) {
+    const reason = verifyWebhookSignature(req.headers['pairiquium-signature'], raw, config.webhookSecret);
+    if (reason) {
+      log(`webhook: rejected (${reason})`);
+      sendJson(res, 401, { error: reason });
+      return;
+    }
+  }
+
   let payload;
   try {
-    payload = await readJsonBody(req);
+    payload = parseJson(raw);
   } catch (err) {
     sendJson(res, 400, { error: `invalid JSON body: ${err.message}` });
     return;

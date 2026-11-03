@@ -7,10 +7,11 @@ enforces on ticket minting.
 
 **This is a local dev/demo tool, not a production pattern.** It holds no persistent state (a
 restart loses every in-flight match), has no authentication on any of its own endpoints, and the
-match webhook itself carries no signature yet (per `spec/PROTOCOL.md` section 5 - "do not treat
-a request as authenticated on its own"). It is reachable from the public internet only because
+match webhook is only authenticated if you set `WEBHOOK_SECRET` (the game mode's signing secret
+from the dashboard; see `spec/PROTOCOL.md` section 5 - the backend then verifies
+`Pairiquium-Signature` and answers `401` otherwise). It is reachable from the public internet only because
 you point a temporary tunnel at it yourself for the duration of a local test session. A real
-backend would need, at minimum: webhook signature verification once Pairiquium ships it, a real
+backend would need, at minimum: mandatory webhook signature verification (not optional as here), a real
 datastore instead of an in-memory `Map`, and a relay/game-server fleet instead of one process
 on your laptop.
 

@@ -105,9 +105,28 @@ When a match is made, Pairiquium POSTs to the `NotificationWebhook` URL configur
 ```
 
 - `PartyId` is present on players who queued as part of a party: players sharing one queued together. It is absent for solo players. The other fields are as described in [`openapi.json`](openapi.json).
-- Respond with any `2xx` within **5 seconds**. Anything else, or a timeout, counts as a failure and the delivery is retried.
-- Delivery is **at-least-once**. De-duplicate on `matchId`.
-- The webhook is **not yet signed**, so do not treat a request as authenticated on its own. Request signing is planned.
+- Respond with any `2xx` within **5 seconds**. Anything else, or a timeout, counts as a failure and the delivery is retried. Redirects are not followed: a `3xx` response is a failure.
+- Delivery is **at-least-once**. De-duplicate on the `Pairiquium-Webhook-Id` header, which equals `matchId` and is identical across retries.
+- The `NotificationWebhook` URL must be a public `https` address. `http`, credentials in the URL, `localhost`/`.local`/`.internal` names, and private, loopback or link-local IP addresses are rejected.
+
+Each request carries these headers:
+
+| Header | Meaning |
+|---|---|
+| `Pairiquium-Event` | Event type. Currently always `match.found`. |
+| `Pairiquium-Webhook-Id` | The `matchId`. |
+| `Pairiquium-Signature` | `t=<unix seconds>,v1=<hex>`. See below. |
+
+### Verifying the signature
+
+Every request is signed with the game mode's **webhook signing secret**, shown in the dashboard. Verify the signature before trusting the body:
+
+1. Parse `t` and `v1` out of the `Pairiquium-Signature` header.
+2. Compute the HMAC-SHA256 of the string `<t>.<raw request body>`, keyed with the signing secret, and hex-encode it. Use the **raw bytes as received**, not a re-serialised copy of the parsed JSON.
+3. Compare it with `v1` in constant time.
+4. Reject the request if `t` is more than **5 minutes** from your clock, which stops a captured request being replayed.
+
+Game modes created before signing was introduced send no `Pairiquium-Signature` header until their secret is rolled, so an unsigned request is only legitimate for those. Once your game mode has a secret, reject any request that lacks a valid signature.
 
 ## 6. Errors
 
